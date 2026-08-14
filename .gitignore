@@ -1,0 +1,11 @@
+apps/api/.venv/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+apps/web/.next/
+apps/web/node_modules/
+*.tsbuildinfo
+data/runs/
+.codex/
+.env
+.env.local

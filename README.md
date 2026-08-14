@@ -1,6 +1,6 @@
 # IssuePilot
 
-**An AI-powered GitHub issue-to-patch agent that investigates repositories, proposes guarded code changes, and reports how to verify them.**
+**An AI-powered GitHub agent that investigates repositories, proposes guarded code changes, and reports how to verify them.**
 
 IssuePilot turns a public GitHub issue into a structured engineering investigation. Given an issue URL, it fetches the discussion, clones the repository into an isolated run workspace, searches for relevant code, selects a likely reproduction command, asks an AI fixer to generate a minimal patch, validates the diff, and presents the evidence for human review.
 
@@ -85,16 +85,16 @@ sandboxes/
 docs/                        Architecture and delivery notes
 ```
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/health` | Service health check |
+| Method | Endpoint                | Purpose                                 |
+| ------ | ----------------------- | --------------------------------------- |
+| `GET`  | `/health`               | Service health check                    |
 | `POST` | `/api/v1/issues/intake` | Create and execute an investigation run |
-| `GET` | `/api/v1/runs` | List recent persisted runs |
-| `GET` | `/api/v1/runs/{run_id}` | Retrieve one investigation report |
+| `GET`  | `/api/v1/runs`          | List recent persisted runs              |
+| `GET`  | `/api/v1/runs/{run_id}` | Retrieve one investigation report       |
 
 ## Tech stack
 
-- **Frontend:** Next.js 15, React 19, TypeScript
+- **Frontend:** Next.js, React, TypeScript
 - **Backend:** FastAPI, Pydantic, Python 3.11+
 - **AI:** OpenAI Responses API with structured output
 - **Repository integration:** GitHub REST API and Git CLI
@@ -159,16 +159,16 @@ Open [http://localhost:3000](http://localhost:3000). API documentation is availa
 
 ### Important configuration
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `OPENAI_API_KEY` | unset | Enables AI patch generation |
-| `GITHUB_TOKEN` | unset | Raises GitHub API rate limits |
-| `ISSUEPILOT_WORKSPACE_ROOT` | `data/runs` | Location for cloned repos and run artifacts |
-| `ISSUEPILOT_ENABLE_COMMAND_EXECUTION` | `false` | Enables repository command execution |
-| `ISSUEPILOT_ENABLE_PATCH_APPLICATION` | `true` | Allows validated patches to be applied to run clones |
-| `ISSUEPILOT_COMMAND_TIMEOUT_SECONDS` | `45` | Verification-command timeout |
-| `ISSUEPILOT_MAX_PATCH_BYTES` | `100000` | Maximum accepted patch size |
-| `ISSUEPILOT_MAX_PATCH_FILES` | `8` | Maximum files changed by one patch |
+| Variable                              | Default     | Description                                          |
+| ------------------------------------- | ----------- | ---------------------------------------------------- |
+| `OPENAI_API_KEY`                      | unset       | Enables AI patch generation                          |
+| `GITHUB_TOKEN`                        | unset       | Raises GitHub API rate limits                        |
+| `ISSUEPILOT_WORKSPACE_ROOT`           | `data/runs` | Location for cloned repos and run artifacts          |
+| `ISSUEPILOT_ENABLE_COMMAND_EXECUTION` | `false`     | Enables repository command execution                 |
+| `ISSUEPILOT_ENABLE_PATCH_APPLICATION` | `true`      | Allows validated patches to be applied to run clones |
+| `ISSUEPILOT_COMMAND_TIMEOUT_SECONDS`  | `45`        | Verification-command timeout                         |
+| `ISSUEPILOT_MAX_PATCH_BYTES`          | `100000`    | Maximum accepted patch size                          |
+| `ISSUEPILOT_MAX_PATCH_FILES`          | `8`         | Maximum files changed by one patch                   |
 
 ## Roadmap
 
@@ -200,7 +200,7 @@ This project explores practical software-engineering problems beyond prompt cons
 
 ## Project status
 
-IssuePilot is under active development and is intended as an engineering portfolio project. It is not yet suitable for running untrusted repository code in production. Contributions and technical feedback are welcome.
+IssuePilot is under active development.
 
 ## License
 

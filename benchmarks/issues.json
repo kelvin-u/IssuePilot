@@ -1,0 +1,14 @@
+[
+  {
+    "name": "FastAPI duplicate dependency regression",
+    "issue_url": "https://github.com/fastapi/fastapi/issues/12000",
+    "expected_runtime": "python",
+    "expected_path_prefixes": ["fastapi/", "tests/"]
+  },
+  {
+    "name": "Next.js development server regression",
+    "issue_url": "https://github.com/vercel/next.js/issues/70000",
+    "expected_runtime": "node",
+    "expected_path_prefixes": ["packages/", "test/"]
+  }
+]

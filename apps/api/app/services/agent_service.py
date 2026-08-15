@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from collections.abc import Callable
 from uuid import UUID, uuid4
 
 from app.schemas.issue import GitHubIssueContext, IssueIntakeRequest
@@ -24,26 +25,59 @@ from app.services.verification_service import verify_applied_patch
 RUN_STORE: dict[UUID, RunRecord] = {}
 
 
-def create_run(payload: IssueIntakeRequest, patch_agent: PatchAgent | None = None) -> RunRecord:
+class RunCancelled(Exception):
+    pass
+
+
+def create_run(
+    payload: IssueIntakeRequest,
+    patch_agent: PatchAgent | None = None,
+    should_cancel: Callable[[], bool] | None = None,
+    on_progress: Callable[[str, str], None] | None = None,
+) -> RunRecord:
+    cancel = should_cancel or (lambda: False)
+    progress = on_progress or (lambda _stage, _detail: None)
+    progress("reading_issue", "Reading the issue, labels, and discussion.")
+    _raise_if_cancelled(cancel)
     issue_context = fetch_issue_context(str(payload.issue_url))
+    _raise_if_cancelled(cancel)
     issue_summary = summarize_issue(issue_context)
     run_id = uuid4()
+    progress("preparing_workspace", "Cloning the repository into an isolated workspace.")
     prepared_workspace = prepare_repository_workspace(issue_context, run_id)
+    _raise_if_cancelled(cancel)
     workspace = prepared_workspace.summary
+    progress("inspecting_repository", "Searching the repository for relevant code and evidence.")
     repository_inspection = inspect_repository(
         issue_context,
         workspace,
         issue_summary.suspected_area,
     )
+    _raise_if_cancelled(cancel)
+    progress("running_baseline", "Running the reproduction command inside Docker.")
     command_execution = plan_and_optionally_run_commands(workspace)
-    patch_proposal = generate_patch_proposal(
-        issue_context,
-        workspace,
-        repository_inspection,
-        patch_agent,
-    )
-    patch_application = apply_patch_proposal(workspace, patch_proposal)
+    _raise_if_cancelled(cancel)
+    if command_execution.status == "failed" and command_execution.exit_code not in {None, 0}:
+        progress("generating_patch", "Generating and validating a focused patch.")
+        patch_proposal = generate_patch_proposal(
+            issue_context,
+            workspace,
+            repository_inspection,
+            patch_agent,
+        )
+        _raise_if_cancelled(cancel)
+        patch_application = apply_patch_proposal(workspace, patch_proposal)
+    else:
+        patch_proposal = PatchProposal(
+            status="skipped",
+            summary="Patch generation requires a reproducible failing baseline in a disposable container.",
+        )
+        patch_application = PatchApplication(
+            message="Patch application was gated because the baseline did not execute and fail."
+        )
+    progress("verifying_patch", "Rerunning the baseline command against the patched workspace.")
     verification = verify_applied_patch(workspace, patch_application, command_execution)
+    _raise_if_cancelled(cancel)
 
     run = RunRecord(
         id=run_id,
@@ -143,6 +177,11 @@ def create_run(payload: IssueIntakeRequest, patch_agent: PatchAgent | None = Non
     RUN_STORE[run_id] = run
     save_run_record(run)
     return run
+
+
+def _raise_if_cancelled(cancel: Callable[[], bool]) -> None:
+    if cancel():
+        raise RunCancelled("Investigation was cancelled.")
 
 
 def get_run(run_id: UUID) -> RunRecord | None:

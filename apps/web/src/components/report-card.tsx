@@ -15,6 +15,7 @@ export function ReportCard({ run }: ReportCardProps) {
 
   return (
     <section
+      className="report-card"
       style={{
         display: "grid",
         gap: "1rem",

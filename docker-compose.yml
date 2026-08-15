@@ -1,6 +1,16 @@
-version: "3.9"
-
 services:
+  python-runner:
+    image: issuepilot-python-runner:latest
+    build:
+      context: ./sandboxes/python-runner
+    profiles: ["runners"]
+
+  node-runner:
+    image: issuepilot-node-runner:latest
+    build:
+      context: ./sandboxes/node-runner
+    profiles: ["runners"]
+
   api:
     build:
       context: ./apps/api

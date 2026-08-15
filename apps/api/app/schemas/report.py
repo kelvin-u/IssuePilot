@@ -40,6 +40,7 @@ class CommandExecution(BaseModel):
     output_excerpt: str
     commands: list[CommandCandidate]
     exit_code: int | None = None
+    container_image: str = ""
 
 
 class PatchProposal(BaseModel):
@@ -67,6 +68,7 @@ class VerificationResult(BaseModel):
     command: str = ""
     exit_code: int | None = None
     output_excerpt: str = "Verification was not run."
+    baseline_failed: bool = False
 
 
 class InvestigationReport(BaseModel):

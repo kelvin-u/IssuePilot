@@ -8,6 +8,7 @@ export function RunStatus({ run }: RunStatusProps) {
   if (!run) {
     return (
       <section
+        className="run-status-card"
         style={{
           padding: "1.25rem",
           borderRadius: "24px",
@@ -24,6 +25,7 @@ export function RunStatus({ run }: RunStatusProps) {
 
   return (
     <section
+      className="run-status-card"
       style={{
         display: "grid",
         gap: "1rem",
@@ -55,17 +57,9 @@ export function RunStatus({ run }: RunStatusProps) {
         <Metric label="Sandbox runtime" value={run.workspace.sandbox.runtime} />
       </div>
 
-      <article
-        style={{
-          padding: "1rem",
-          borderRadius: "18px",
-          border: "1px solid var(--line)",
-          background: "#fff",
-          display: "grid",
-          gap: "0.55rem",
-        }}
-      >
-        <strong>Workspace</strong>
+      <details className="workspace-details">
+        <summary>Technical workspace details</summary>
+        <div className="workspace-details__content">
         <div style={{ color: "var(--muted)", lineHeight: 1.6 }}>
           Job directory: {run.workspace.job_dir}
         </div>
@@ -78,7 +72,8 @@ export function RunStatus({ run }: RunStatusProps) {
         <div style={{ color: "var(--muted)", lineHeight: 1.6 }}>
           Launch hint: {run.workspace.sandbox.launch_hint}
         </div>
-      </article>
+        </div>
+      </details>
 
       <div style={{ display: "grid", gap: "0.75rem" }}>
         <h3 style={{ margin: 0, fontSize: "1rem" }}>Investigation timeline</h3>

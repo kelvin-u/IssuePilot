@@ -4,7 +4,7 @@
 
 IssuePilot turns a public GitHub issue into a structured engineering investigation. Given an issue URL, it fetches the discussion, clones the repository into an isolated run workspace, searches for relevant code, selects a likely reproduction command, asks an AI fixer to generate a minimal patch, validates the diff, and presents the evidence for human review.
 
-> **Current stage:** Functional MVP. Issue ingestion, repository inspection, patch generation, guarded patch application, persisted run history, and optional verification are implemented. Container-enforced execution and a full automated test suite are the next priorities.
+> **Current stage:** Verified-patch beta. Investigations run as cancellable background jobs, target commands execute in disposable containers, and a run completes only after a failing baseline becomes a passing post-patch check.
 
 ## Why I built it
 
@@ -36,7 +36,7 @@ Generate and validate a unified diff
 Apply patch in the run workspace
        |
        v
-Optionally run verification and save the report
+Require a passing post-patch verification and save the report
 ```
 
 ## Current capabilities
@@ -49,9 +49,11 @@ Optionally run verification and save the report
 - Uses the OpenAI Responses API to produce a structured diagnosis and unified diff
 - Rejects oversized, binary, path-traversing, Git-metadata, and excessive-file patches
 - Runs `git apply --check` before modifying the isolated clone
-- Optionally applies the patch and reruns the selected verification command
+- Applies patches only after a containerized failing baseline and reruns the same command after the patch
 - Persists run records and patch artifacts across API restarts
 - Displays investigation timelines, evidence, patches, verification output, and run history
+- Supports bounded background workers, cancellation, API-key auth, rate limits, and workspace retention
+- Evaluates curated issues and can create a guarded GitHub draft PR from a verified run
 
 ## Safety decisions
 
@@ -64,7 +66,7 @@ Agent-generated patches are treated as untrusted input:
 - Repository command execution is disabled by default and requires an explicit environment flag.
 - Generated changes are applied only to the per-run clone, never to IssuePilot itself.
 
-The included runner images establish the intended isolation boundary. The current MVP still invokes enabled verification commands from the API process, so it should only be used with trusted repositories until Docker-backed execution is fully connected.
+Enabled repository commands are invoked only through disposable Docker containers with networking disabled, capabilities dropped, CPU/memory/PID limits, and a no-new-privileges policy. Build the runner images before enabling execution; an unavailable runtime is treated as an infrastructure skip, never as a reproduced failure.
 
 ## Architecture
 
@@ -88,9 +90,11 @@ docs/                        Architecture and delivery notes
 | Method | Endpoint                | Purpose                                 |
 | ------ | ----------------------- | --------------------------------------- |
 | `GET`  | `/health`               | Service health check                    |
-| `POST` | `/api/v1/issues/intake` | Create and execute an investigation run |
+| `POST` | `/api/v1/issues/intake` | Queue an investigation and return its job |
+| `GET`/`DELETE` | `/api/v1/jobs/{job_id}` | Poll or cancel a background investigation |
 | `GET`  | `/api/v1/runs`          | List recent persisted runs              |
 | `GET`  | `/api/v1/runs/{run_id}` | Retrieve one investigation report       |
+| `POST` | `/api/v1/runs/{run_id}/draft-pr` | Create a guarded GitHub draft PR |
 
 ## Tech stack
 
@@ -98,7 +102,7 @@ docs/                        Architecture and delivery notes
 - **Backend:** FastAPI, Pydantic, Python 3.11+
 - **AI:** OpenAI Responses API with structured output
 - **Repository integration:** GitHub REST API and Git CLI
-- **Execution:** Python/Node command planning with Docker runner scaffolds
+- **Execution:** Resource-limited disposable Python/Node Docker runners
 - **Persistence:** JSON run records and artifacts in per-run workspaces
 
 ## Run locally
@@ -157,6 +161,12 @@ npm run dev:web
 
 Open [http://localhost:3000](http://localhost:3000). API documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs).
 
+Before enabling repository execution, build the disposable runners from the repository root:
+
+```bash
+docker compose --profile runners build python-runner node-runner
+```
+
 ### Important configuration
 
 | Variable                              | Default     | Description                                          |
@@ -169,6 +179,23 @@ Open [http://localhost:3000](http://localhost:3000). API documentation is availa
 | `ISSUEPILOT_COMMAND_TIMEOUT_SECONDS`  | `45`        | Verification-command timeout                         |
 | `ISSUEPILOT_MAX_PATCH_BYTES`          | `100000`    | Maximum accepted patch size                          |
 | `ISSUEPILOT_MAX_PATCH_FILES`          | `8`         | Maximum files changed by one patch                   |
+| `ISSUEPILOT_API_KEY`                  | unset       | If set, required in the `X-API-Key` request header   |
+| `ISSUEPILOT_RATE_LIMIT_PER_MINUTE`    | `30`        | Per-client API request budget                        |
+| `ISSUEPILOT_WORKSPACE_RETENTION_HOURS`| `168`       | Age after which UUID run workspaces are purged       |
+| `ISSUEPILOT_MAX_BACKGROUND_WORKERS`   | `2`         | Concurrent investigation worker limit                |
+| `ISSUEPILOT_ENABLE_DRAFT_PRS`         | `false`     | Enables explicit draft-PR requests for verified runs |
+
+### Tests and benchmark
+
+```bash
+cd apps/api && pytest
+npm run test:web
+npm run build:web
+npm run test:e2e
+cd apps/api && python -m app.benchmark
+```
+
+The benchmark cases live in `benchmarks/issues.json`; each run writes a machine-readable report to `benchmarks/results/latest.json`. It performs real GitHub, model, Docker, and repository operations, so credentials and runner images are required.
 
 ## Roadmap
 
@@ -179,13 +206,13 @@ Open [http://localhost:3000](http://localhost:3000). API documentation is availa
 - [x] Guarded diff validation and application
 - [x] Disk-backed investigation history
 - [x] Investigation and patch-review dashboard
-- [ ] Execute all target code inside disposable Docker containers
-- [ ] Require a failing baseline and passing post-patch verification
-- [ ] Add backend, frontend, and end-to-end test suites
-- [ ] Move long-running investigations to a background job queue
-- [ ] Evaluate against a curated benchmark of real issues
-- [ ] Generate draft PR descriptions and guarded GitHub draft PRs
-- [ ] Add authentication, rate limiting, cancellation, and workspace retention policies
+- [x] Execute all target code inside disposable Docker containers
+- [x] Require a failing baseline and passing post-patch verification
+- [x] Add backend, frontend, and end-to-end test suites
+- [x] Move long-running investigations to a background job queue
+- [x] Evaluate against a curated benchmark of real issues
+- [x] Generate draft PR descriptions and guarded GitHub draft PRs
+- [x] Add authentication, rate limiting, cancellation, and workspace retention policies
 
 ## Engineering focus
 

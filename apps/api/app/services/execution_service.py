@@ -1,3 +1,4 @@
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -53,10 +54,24 @@ def execute_repository_command(
             commands=command_candidates,
         )
 
+    image = _runner_image(workspace)
+    if not image:
+        return CommandExecution(
+            status="skipped", selected_command=command,
+            output_excerpt="No disposable runner image is configured for this repository runtime.",
+            commands=command_candidates,
+        )
+
+    docker_command = [
+        settings.docker_binary, "run", "--rm", "--network", "none",
+        "--cpus", settings.docker_cpu_limit, "--memory", settings.docker_memory_limit,
+        "--pids-limit", str(settings.docker_pids_limit), "--cap-drop", "ALL",
+        "--security-opt", "no-new-privileges", "-v", f"{repo_dir.resolve()}:/workspace",
+        "-w", "/workspace", image, "sh", "-lc", shlex.join(shlex.split(command)),
+    ]
     try:
         completed = subprocess.run(
-            command.split(" "),
-            cwd=repo_dir,
+            docker_command,
             capture_output=True,
             text=True,
             timeout=settings.command_timeout_seconds,
@@ -66,8 +81,9 @@ def execute_repository_command(
         return CommandExecution(
             status="failed",
             selected_command=command,
-            output_excerpt="The runtime needed for the selected command was not available on this machine.",
+            output_excerpt="Docker was not available; target code was not executed on the API host.",
             commands=command_candidates,
+            container_image=image,
         )
     except subprocess.TimeoutExpired:
         return CommandExecution(
@@ -75,16 +91,27 @@ def execute_repository_command(
             selected_command=command,
             output_excerpt="The selected command timed out before finishing.",
             commands=command_candidates,
+            container_image=image,
         )
 
-    output = (completed.stdout or completed.stderr or "Command finished without output.").strip()
+    output = "\n".join(part.strip() for part in (completed.stdout, completed.stderr) if part and part.strip()) or "Command finished without output."
+    infrastructure_failure = completed.returncode in {125, 126, 127}
     return CommandExecution(
-        status="succeeded" if completed.returncode == 0 else "failed",
+        status="skipped" if infrastructure_failure else "succeeded" if completed.returncode == 0 else "failed",
         selected_command=command,
-        output_excerpt=_truncate(output, 1200),
+        output_excerpt=_truncate(("Runner could not execute the planned command.\n" if infrastructure_failure else "") + output, 1200),
         commands=command_candidates,
         exit_code=completed.returncode,
+        container_image=image,
     )
+
+
+def _runner_image(workspace: WorkspaceSummary) -> str:
+    if workspace.sandbox.runtime == "python":
+        return settings.python_runner_image
+    if workspace.sandbox.runtime in {"node", "generic"}:
+        return settings.node_runner_image
+    return ""
 
 
 def _build_command_candidates(repo_dir: Path, workspace: WorkspaceSummary) -> list[CommandCandidate]:

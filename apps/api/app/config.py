@@ -20,6 +20,12 @@ class Settings(BaseModel):
     clone_timeout_seconds: int = int(os.getenv("ISSUEPILOT_CLONE_TIMEOUT_SECONDS", "60"))
     enable_command_execution: bool = os.getenv("ISSUEPILOT_ENABLE_COMMAND_EXECUTION", "").lower() == "true"
     command_timeout_seconds: int = int(os.getenv("ISSUEPILOT_COMMAND_TIMEOUT_SECONDS", "45"))
+    docker_binary: str = os.getenv("ISSUEPILOT_DOCKER_BINARY", "docker")
+    docker_memory_limit: str = os.getenv("ISSUEPILOT_DOCKER_MEMORY_LIMIT", "1g")
+    docker_cpu_limit: str = os.getenv("ISSUEPILOT_DOCKER_CPU_LIMIT", "1.0")
+    docker_pids_limit: int = int(os.getenv("ISSUEPILOT_DOCKER_PIDS_LIMIT", "256"))
+    python_runner_image: str = os.getenv("ISSUEPILOT_PYTHON_RUNNER_IMAGE", "issuepilot-python-runner:latest")
+    node_runner_image: str = os.getenv("ISSUEPILOT_NODE_RUNNER_IMAGE", "issuepilot-node-runner:latest")
     enable_patch_application: bool = os.getenv(
         "ISSUEPILOT_ENABLE_PATCH_APPLICATION", "true"
     ).lower() == "true"
@@ -28,6 +34,11 @@ class Settings(BaseModel):
     max_patch_bytes: int = int(os.getenv("ISSUEPILOT_MAX_PATCH_BYTES", "100000"))
     max_patch_files: int = int(os.getenv("ISSUEPILOT_MAX_PATCH_FILES", "8"))
     max_agent_context_chars: int = int(os.getenv("ISSUEPILOT_MAX_AGENT_CONTEXT_CHARS", "30000"))
+    api_key: str | None = os.getenv("ISSUEPILOT_API_KEY")
+    rate_limit_per_minute: int = int(os.getenv("ISSUEPILOT_RATE_LIMIT_PER_MINUTE", "30"))
+    workspace_retention_hours: int = int(os.getenv("ISSUEPILOT_WORKSPACE_RETENTION_HOURS", "168"))
+    max_background_workers: int = int(os.getenv("ISSUEPILOT_MAX_BACKGROUND_WORKERS", "2"))
+    enable_draft_prs: bool = os.getenv("ISSUEPILOT_ENABLE_DRAFT_PRS", "false").lower() == "true"
 
 
 settings = Settings()

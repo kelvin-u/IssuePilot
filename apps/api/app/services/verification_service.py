@@ -9,6 +9,13 @@ def verify_applied_patch(
     application: PatchApplication,
     baseline: CommandExecution,
 ) -> VerificationResult:
+    if baseline.status != "failed" or baseline.exit_code in {None, 0}:
+        return VerificationResult(
+            status="skipped",
+            command=baseline.selected_command,
+            output_excerpt="Verification is gated: the baseline must execute and fail before a patch can be credited.",
+            baseline_failed=False,
+        )
     if application.status != "applied":
         return VerificationResult(
             status="skipped",
@@ -39,4 +46,5 @@ def verify_applied_patch(
         command=execution.selected_command,
         exit_code=execution.exit_code,
         output_excerpt=execution.output_excerpt,
+        baseline_failed=True,
     )

@@ -9,6 +9,7 @@ type RunHistoryProps = {
 export function RunHistory({ runs, activeRunId, onSelect }: RunHistoryProps) {
   return (
     <section
+      className="run-history"
       style={{
         display: "grid",
         gap: "1rem",

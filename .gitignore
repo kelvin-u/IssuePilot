@@ -4,6 +4,9 @@ apps/api/.venv/
 *.egg-info/
 apps/web/.next/
 apps/web/node_modules/
+node_modules/
+apps/web/test-results/
+apps/web/playwright-report/
 *.tsbuildinfo
 data/runs/
 .codex/

@@ -54,6 +54,7 @@ export type RunRecord = {
       selected_command: string;
       output_excerpt: string;
       exit_code: number | null;
+      container_image: string;
       commands: {
         label: string;
         command: string;
@@ -83,6 +84,7 @@ export type RunRecord = {
       command: string;
       exit_code: number | null;
       output_excerpt: string;
+      baseline_failed: boolean;
     };
     artifacts: {
       label: string;
@@ -94,7 +96,21 @@ export type RunRecord = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export async function intakeIssue(issueUrl: string): Promise<RunRecord> {
+export type JobRecord = {
+  id: string;
+  status: "queued" | "running" | "completed" | "failed" | "cancel_requested" | "cancelled";
+  run_id: string | null;
+  error: string;
+  stage: string;
+  stage_detail: string;
+};
+
+export type JobProgress = Pick<JobRecord, "status" | "stage" | "stage_detail">;
+
+export async function intakeIssue(
+  issueUrl: string,
+  onProgress?: (progress: JobProgress) => void,
+): Promise<RunRecord> {
   const response = await fetch(`${API_URL}/api/v1/issues/intake`, {
     method: "POST",
     headers: {
@@ -108,6 +124,24 @@ export async function intakeIssue(issueUrl: string): Promise<RunRecord> {
     throw new Error(payload?.detail ?? "Failed to create investigation run");
   }
 
+  const job = (await response.json()) as JobRecord;
+  onProgress?.(job);
+  for (;;) {
+    const statusResponse = await fetch(`${API_URL}/api/v1/jobs/${job.id}`, { cache: "no-store" });
+    if (!statusResponse.ok) throw new Error("Failed to read investigation job");
+    const current = (await statusResponse.json()) as JobRecord;
+    onProgress?.(current);
+    if (current.status === "completed" && current.run_id) return getRun(current.run_id);
+    if (current.status === "failed" || current.status === "cancelled") {
+      throw new Error(current.error || `Investigation ${current.status}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+}
+
+export async function getRun(runId: string): Promise<RunRecord> {
+  const response = await fetch(`${API_URL}/api/v1/runs/${runId}`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Failed to load investigation run");
   return response.json();
 }
 

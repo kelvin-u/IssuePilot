@@ -1,4 +1,6 @@
 import json
+import shutil
+import time
 from pathlib import Path
 from uuid import UUID
 
@@ -47,3 +49,27 @@ def list_run_records(limit: int = 12) -> list[RunRecord]:
         except (OSError, json.JSONDecodeError, ValueError):
             continue
     return runs
+
+
+def purge_expired_workspaces() -> int:
+    """Remove only UUID-named run directories older than the configured retention window."""
+    workspace_root = Path(settings.workspace_root).resolve()
+    if not workspace_root.exists() or settings.workspace_retention_hours <= 0:
+        return 0
+    cutoff = time.time() - settings.workspace_retention_hours * 3600
+    removed = 0
+    for candidate in workspace_root.iterdir():
+        try:
+            UUID(candidate.name)
+        except ValueError:
+            continue
+        resolved = candidate.resolve()
+        if not resolved.is_relative_to(workspace_root) or not resolved.is_dir():
+            continue
+        try:
+            if resolved.stat().st_mtime < cutoff:
+                shutil.rmtree(resolved)
+                removed += 1
+        except OSError:
+            continue
+    return removed

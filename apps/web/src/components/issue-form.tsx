@@ -31,55 +31,31 @@ export function IssueForm({ onSubmit }: IssueFormProps) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        display: "grid",
-        gap: "1rem",
-        padding: "1.25rem",
-        borderRadius: "24px",
-        background: "var(--panel)",
-        border: "1px solid var(--line)",
-        boxShadow: "0 18px 60px rgba(95, 64, 42, 0.10)",
-      }}
-    >
-      <label style={{ display: "grid", gap: "0.5rem" }}>
-        <span style={{ fontSize: "0.95rem", color: "var(--muted)" }}>
-          Paste a GitHub issue URL
-        </span>
+    <form onSubmit={handleSubmit} className="issue-form">
+      <div className="issue-form__copy">
+        <p className="eyebrow">New investigation</p>
+        <h2>Enter a public issue URL</h2>
+        <p>We’ll inspect the repository, attempt a reproduction, and only recommend a patch that passes verification.</p>
+      </div>
+      <div className="issue-form__controls">
+        <label htmlFor="issue-url">GitHub issue URL</label>
+        <div className="issue-form__row">
         <input
+          id="issue-url"
           type="url"
           required
           value={issueUrl}
           onChange={(event) => setIssueUrl(event.target.value)}
           placeholder="https://github.com/owner/repo/issues/123"
-          style={{
-            padding: "0.95rem 1rem",
-            borderRadius: "14px",
-            border: "1px solid var(--line)",
-            background: "#fff",
-          }}
         />
-      </label>
-
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        style={{
-          justifySelf: "start",
-          padding: "0.9rem 1.25rem",
-          borderRadius: "999px",
-          border: "none",
-          color: "#fffaf2",
-          background: isSubmitting ? "#b99176" : "linear-gradient(135deg, var(--accent), var(--accent-dark))",
-          cursor: isSubmitting ? "wait" : "pointer",
-        }}
-      >
-        {isSubmitting ? "Agent is working..." : "Generate verified patch"}
-      </button>
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? <><span className="button-spinner" aria-hidden="true" />Investigating</> : "Investigate issue"}
+          </button>
+        </div>
+      </div>
 
       {error ? (
-        <p style={{ margin: 0, color: "#8b1e3f" }}>{error}</p>
+        <p className="form-error" role="alert">{error}</p>
       ) : null}
     </form>
   );

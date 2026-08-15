@@ -20,8 +20,8 @@ Convert a GitHub issue into a structured investigation run that can eventually p
 7. Verifier reruns tests and checks for improvement.
 8. Frontend renders timeline, findings, and patch output.
 
-## Initial MVP Cut
+## Verified-patch beta
 
-The current scaffold now covers real GitHub issue ingestion, per-run workspace preparation, repository inspection, repro-command planning, and disk-backed run history. Each run gets its own job directory, a repository clone attempt, a selected sandbox runtime profile, and persisted investigation artifacts.
+Intake is submitted to a bounded in-process worker queue. Each run gets its own job directory, repository clone, selected runtime profile, and persisted artifacts. Inferred commands execute only in resource-limited, network-disabled Docker runners. The baseline must execute and fail before IssuePilot generates or applies a patch, and a run completes only when the same command passes afterward.
 
-The next meaningful milestone is moving from planned execution into verified patch generation so the agent can prove that a code change actually improves the reported failure.
+API-key access control, per-client rate limiting, cancellation, UUID-scoped retention cleanup, curated benchmark evaluation, and verified-run-only draft PR creation form the operational boundary around the pipeline.
